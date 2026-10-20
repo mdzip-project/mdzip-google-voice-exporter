@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Google Voice Chat Exporter
 // @namespace    https://github.com/mdzip-project/mdzip-google-voice-exporter
-// @version      0.2.1
+// @version      0.2.2
 // @description  Save an open Google Voice conversation — text, timestamps, and photos — as a single portable file.
 // @match        https://voice.google.com/*
 // @license      Apache-2.0
-// @require      https://cdn.jsdelivr.net/npm/@mdzip/core-js@1.4.0/dist/mdzip-core.iife.min.js
+// @require      https://cdn.jsdelivr.net/npm/@mdzip/core-js@2.0.1/dist/mdzip-core.iife.min.js
 // @grant        GM_download
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
@@ -18,7 +18,7 @@
   "use strict";
 
   const APP_NAME = "Google Voice Chat Exporter";
-  const APP_VERSION = "0.2.1";
+  const APP_VERSION = "0.2.2";
   const APP_URL = "https://github.com/mdzip-project/mdzip-google-voice-exporter";
   // The exported file is a standard zip either way (manifest.json and all) —
   // this only controls the extension. Set to "zip" if you'd rather skip the
@@ -382,6 +382,21 @@
         font-size: 16px;
         margin: 0 0 14px;
       }
+      .gv-mdz-dialog-header {
+        align-items: baseline;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .gv-mdz-dialog-version {
+        color: #5f6368;
+        font-size: 12px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .gv-mdz-dialog-version:hover {
+        text-decoration: underline;
+      }
       .gv-mdz-dialog-option {
         margin-bottom: 12px;
       }
@@ -565,9 +580,19 @@
     dialog.className = "gv-mdz-dialog";
     overlay.appendChild(dialog);
 
+    const header = document.createElement("div");
+    header.className = "gv-mdz-dialog-header";
     const heading = document.createElement("h2");
     heading.textContent = "Export Conversation";
-    dialog.appendChild(heading);
+    const version = document.createElement("a");
+    version.className = "gv-mdz-dialog-version";
+    version.href = APP_URL;
+    version.target = "_blank";
+    version.rel = "noopener noreferrer";
+    version.textContent = `v${APP_VERSION}`;
+    version.title = `${APP_NAME} ${APP_VERSION}`;
+    header.append(heading, version);
+    dialog.appendChild(header);
 
     // --- Scope options ---
     const scopeAll = buildScopeOption("all", "Export this entire conversation (could take a while)", true);
@@ -2082,8 +2107,7 @@
       entryPoint: "index.md",
       language: navigator.language || "en",
       description: "Exported Google Voice conversation including text and assets.",
-      // buildArchive has supported this since @mdzip/core-js 1.3.2 (well
-      // before the 1.4.0 CDN bundle this script already @requires) — it
+      // buildArchive has supported this since @mdzip/core-js 1.3.2 — it
       // forwards JSZip's own generateAsync progress, so this is the exact
       // compression work happening on large conversations, not a guess.
       onProgress: (progress) => {
