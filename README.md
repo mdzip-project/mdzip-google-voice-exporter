@@ -30,7 +30,8 @@ you have to keep track of separately.
 4. Wait for it to finish scrolling and downloading — for long threads this
    can take a while, since it has to load the whole history first.
 
-You'll end up with a `gv-export-<date>.mdz` file.
+You'll end up with a file like `gv-export-<contact>-<date>.mdz`, or one
+file per year (`gv-export-<contact>-2024.mdz`) for a long conversation.
 
 ## Open the result
 
@@ -38,7 +39,7 @@ An `.mdz` file is just a ZIP archive with a defined internal layout — see
 [the full list of MDZip-compatible tools](https://mdzip.org/tools.html) for
 viewers, editors, and the CLI. Or skip tooling entirely:
 
-- Rename `gv-export-<date>.mdz` to `.zip` and extract it with any archive
+- Rename the `.mdz` file to `.zip` and extract it with any archive
   utility.
 - Open `index.md` in any Markdown-aware editor — the exported images are
   referenced with paths relative to the archive, so they render as long as
@@ -51,14 +52,17 @@ images — no proprietary format to fight with.
 ## What's inside the archive
 
 ```text
-gv-export-2026-08-01.mdz
+gv-export-alex-rivera-2026-08-01.mdz
 ├── index.md          # the conversation, one heading per day
 ├── manifest.json     # title, export time, entry point
 ├── README.md         # what this file is (mdzip.org boilerplate)
 ├── AGENTS.md         # guidance for AI agents reading the archive
 ├── diagnostics.json  # scroll/collection counters, for troubleshooting
 └── images/
-    └── 2026-08-01t17-43-00.000-07-00-image-01.jpg
+    ├── 2026-08-01-1743-alex-rivera.jpg   # photos, named by time and sender
+    └── avatars/
+        ├── me.jpg
+        └── alex-rivera.png
 ```
 
 ## Scope and limitations

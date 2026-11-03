@@ -1,15 +1,21 @@
 // ==UserScript==
 // @name         Google Voice Chat Exporter
 // @namespace    https://github.com/mdzip-project/mdzip-google-voice-exporter
-// @version      0.2.2
-// @description  Save an open Google Voice conversation — text, timestamps, and photos — as a single portable file.
+// @homepageURL  https://mdzip.org/google-voice
+// @supportURL   https://github.com/mdzip-project/mdzip-google-voice-exporter/issues
+// @version      0.2.3
+// @description  Save an open Google Voice conversation, with its text, timestamps and photos, as one MDZip (.mdz) file you can keep, print or share.
+// @icon         https://mdzip.org/assets/images/phone-icon-64.png
 // @match        https://voice.google.com/*
 // @license      Apache-2.0
 // @require      https://cdn.jsdelivr.net/npm/@mdzip/core-js@2.0.1/dist/mdzip-core.iife.min.js
 // @grant        GM_download
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
-// @connect      *
+// @connect      googleusercontent.com
+// @connect      google.com
+// @connect      gstatic.com
+// @connect      ggpht.com
 // @downloadURL  https://raw.githubusercontent.com/mdzip-project/mdzip-google-voice-exporter/main/google-voice-chat-exporter.user.js
 // @updateURL    https://raw.githubusercontent.com/mdzip-project/mdzip-google-voice-exporter/main/google-voice-chat-exporter.user.js
 // ==/UserScript==
@@ -18,7 +24,7 @@
   "use strict";
 
   const APP_NAME = "Google Voice Chat Exporter";
-  const APP_VERSION = "0.2.2";
+  const APP_VERSION = "0.2.3";
   const APP_URL = "https://github.com/mdzip-project/mdzip-google-voice-exporter";
   // The exported file is a standard zip either way (manifest.json and all) —
   // this only controls the extension. Set to "zip" if you'd rather skip the
@@ -49,10 +55,9 @@
     "Both are the exact same standard zip archive (manifest.json and all) - this only changes the file extension.<br/>",
     "The <strong>.mdz</strong> format can be viewed instantly without unzipping first.",
     "Current viewers include:",
-    "<a href=\"https://mdzip.org/studio.html\" target=\"_blank\" rel=\"noopener noreferrer\">MDZip Studio (Window only for now)</a>,",
-    "<a href=\"https://mdzip.org/studio.html\" target=\"_blank\" rel=\"noopener noreferrer\">Windows Explorer Preview</a> (included with Studio on Windows),",
+    "<a href=\"https://mdzip.org/studio.html\" target=\"_blank\" rel=\"noopener noreferrer\">MDZip Studio</a> (Windows only for now, and it adds previews to File Explorer),",
     "<a href=\"https://marketplace.visualstudio.com/items?itemName=mdzip-project.mdzip-vscode\" target=\"_blank\" rel=\"noopener noreferrer\">MDZip VS Code extension</a>,",
-    "and the <a href=\"https://mdzip.org/editor-demo.html\" target=\"_blank\" rel=\"noopener noreferrer\">mdzip.org demo page</a>.",
+    "and the <a href=\"https://mdzip.org/editor.html?from=google-voice\" target=\"_blank\" rel=\"noopener noreferrer\">browser editor on mdzip.org</a>.",
     "Other applications and extensions are in the works.<br/><br/>",
     "<strong>.zip</strong> skips that hint if you'd rather your OS treat it as an ordinary zip file from the start."
   ].join(" ");
@@ -420,9 +425,8 @@
         padding: 5px 8px;
         width: 100px;
       }
-      .gv-mdz-dialog-sub input:disabled {
-        background: #f4f6f8;
-        color: #9aa0a6;
+      .gv-mdz-dialog-sub-inactive {
+        opacity: 0.55;
       }
       .gv-mdz-dialog-divider {
         border: 0;
@@ -616,14 +620,12 @@
     fromYearInput.max = String(currentYear);
     fromYearInput.placeholder = "From";
     fromYearInput.value = String(currentYear);
-    fromYearInput.disabled = true;
     const toYearInput = document.createElement("input");
     toYearInput.type = "number";
     toYearInput.min = "1990";
     toYearInput.max = String(currentYear);
     toYearInput.placeholder = "To";
     toYearInput.value = String(currentYear);
-    toYearInput.disabled = true;
     yearsSub.append("From ", fromYearInput, " To ", toYearInput);
 
     const scopeDateRange = buildScopeOption("dateRange", "Date Range");
@@ -631,10 +633,8 @@
     dateSub.className = "gv-mdz-dialog-sub";
     const fromDateInput = document.createElement("input");
     fromDateInput.type = "date";
-    fromDateInput.disabled = true;
     const toDateInput = document.createElement("input");
     toDateInput.type = "date";
-    toDateInput.disabled = true;
     dateSub.append("From ", fromDateInput, " To ", toDateInput);
 
     dialog.append(
@@ -643,16 +643,27 @@
       scopeDateRange.row, dateSub
     );
 
-    const scopeRadios = [scopeAll.radio, scopeYears.radio, scopeDateRange.radio];
+    // The fields under each option stay usable: clicking or typing in one
+    // selects its option. (They used to be disabled until the option was
+    // picked, and the greyed-out year boxes already showing this year read
+    // as a choice, so exports silently covered the whole conversation.)
+    const scopeOptions = [[scopeAll, splitSub], [scopeYears, yearsSub], [scopeDateRange, dateSub]];
     const syncScopeEnabled = () => {
-      splitByYearCheckbox.disabled = !scopeAll.radio.checked;
-      fromYearInput.disabled = !scopeYears.radio.checked;
-      toYearInput.disabled = !scopeYears.radio.checked;
-      fromDateInput.disabled = !scopeDateRange.radio.checked;
-      toDateInput.disabled = !scopeDateRange.radio.checked;
+      for (const [option, sub] of scopeOptions) {
+        sub.classList.toggle("gv-mdz-dialog-sub-inactive", !option.radio.checked);
+      }
       updateFilenamePreview();
     };
-    for (const radio of scopeRadios) radio.addEventListener("change", syncScopeEnabled);
+    for (const [option, sub] of scopeOptions) {
+      option.radio.addEventListener("change", syncScopeEnabled);
+      const selectOption = () => {
+        if (option.radio.checked) return;
+        option.radio.checked = true;
+        syncScopeEnabled();
+      };
+      sub.addEventListener("focusin", selectOption);
+      sub.addEventListener("pointerdown", selectOption);
+    }
     for (const input of [fromYearInput, toYearInput, fromDateInput, toDateInput]) {
       input.addEventListener("input", updateFilenamePreview);
     }
@@ -708,7 +719,7 @@
       return { scope: "all", splitByYear: splitByYearCheckbox.checked };
     }
 
-    updateFilenamePreview();
+    syncScopeEnabled(); // also fills in the filename
 
     // --- Actions ---
     const actions = document.createElement("div");
@@ -1105,7 +1116,7 @@
     closeButton.addEventListener("click", () => panel.remove());
 
     const text = document.createElement("div");
-    text.innerHTML = `Don't recognize <strong>.mdz</strong>? Rename it to <strong>.zip</strong> to open anywhere, or view it free at <a href="https://mdzip.org" target="_blank" rel="noopener noreferrer">mdzip.org</a>.`;
+    text.innerHTML = `Don't recognize <strong>.mdz</strong>? <a href="https://mdzip.org/editor.html?from=google-voice" target="_blank" rel="noopener noreferrer">Open it in your browser</a> at mdzip.org (nothing to install), or rename it to <strong>.zip</strong> to open it anywhere.`;
 
     const row = document.createElement("label");
     row.className = "gv-mdz-tip-row";
@@ -1647,6 +1658,55 @@
     }
   }
 
+  function getRenderedMessageDate(item) {
+    return normalizeTimestamp(extractTimestampText(item));
+  }
+
+  function getOnScreenMonthLabel(scrollContainer) {
+    const containerTop = scrollContainer.getBoundingClientRect().top;
+    for (const item of scrollContainer.querySelectorAll("gv-message-item")) {
+      if (item.getBoundingClientRect().bottom <= containerTop) continue;
+      const date = getRenderedMessageDate(item);
+      if (date) return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(date);
+    }
+    return null;
+  }
+
+  function getOnScreenDate(scrollContainer) {
+    const containerTop = scrollContainer.getBoundingClientRect().top;
+    for (const item of scrollContainer.querySelectorAll("gv-message-item")) {
+      if (item.getBoundingClientRect().bottom <= containerTop) continue;
+      const date = getRenderedMessageDate(item);
+      if (date) return date;
+    }
+    return null;
+  }
+
+  // Where the scan pass should start for a date or year range. The loaded
+  // history above the range can't match, so instead of scanning down through
+  // it a screen at a time (years of it, for "just 2026"), halve the distance
+  // to the range's first message a dozen or so times. Returns a position
+  // where the top message is still older than the range, so starting there
+  // misses nothing; 0 if anything along the way can't be read.
+  async function findSweepStart(scrollContainer, range) {
+    if (!range.earliestBoundaryDate) return 0;
+
+    let lo = 0;
+    let hi = scrollContainer.scrollHeight;
+    while (hi - lo > scrollContainer.clientHeight && !exportCancelRequested) {
+      const mid = Math.floor((lo + hi) / 2);
+      const beforeSignature = getTopmostMessageSignature(scrollContainer);
+      scrollContainer.scrollTop = mid;
+      await waitForRenderSettle(scrollContainer, beforeSignature);
+      const date = getOnScreenDate(scrollContainer);
+      if (!date) return lo;
+      if (date < range.earliestBoundaryDate) lo = mid;
+      else hi = mid;
+    }
+    // One screen of margin, in case the list hadn't fully redrawn.
+    return Math.max(0, lo - scrollContainer.clientHeight);
+  }
+
   async function sweepLoadedConversation(collector, range = { scope: "all", label: null }) {
     const messageList = findMessageList();
     const scrollContainer = findScrollContainer(messageList);
@@ -1667,7 +1727,9 @@
     const stepSize = Math.max(250, Math.floor(scrollContainer.clientHeight * 0.65));
     const totalPages = Math.floor(scrollContainer.scrollHeight / stepSize) + 1;
 
-    for (let top = 0; top <= scrollContainer.scrollHeight; top += stepSize) {
+    const startTop = await findSweepStart(scrollContainer, range);
+
+    for (let top = startTop; top <= scrollContainer.scrollHeight; top += stepSize) {
       if (exportCancelRequested) {
         warnings.push("Export canceled by user during the scan pass; some messages may be missing.");
         break;
@@ -1693,7 +1755,9 @@
         }
       }
 
-      const sweepMonthLabel = getOldestCollectedMonthLabel(collector);
+      // The month on screen, not the oldest collected: this pass moves
+      // forward in time, so the oldest stays put and the label looked stuck.
+      const sweepMonthLabel = getOnScreenMonthLabel(scrollContainer) || getOldestCollectedMonthLabel(collector);
       updateProgress(range.label
         ? (sweepMonthLabel
           ? `Scanning through ${sweepMonthLabel}, looking for ${range.label} (${countCollectedInRange(collector, range)} matching messages so far)`
@@ -2277,8 +2341,13 @@
     for (const [sender, monogram] of monogramsBySender) {
       if (pathsBySender.has(sender)) continue;
 
-      const path = makeUniqueArchivePath(`images/avatars/${safeFilename(sender)}.svg`, usedPaths);
-      files.push({ path, text: buildMonogramSvg(monogram.letter, monogram.color) });
+      // PNG first: older viewers (the Windows preview pane among them) can't
+      // show SVG, and the circle is drawn into the image, so it stays round
+      // in viewers that strip the avatar's border-radius style.
+      const png = await buildMonogramPng(monogram.letter, monogram.color);
+      const extension = png ? ".png" : ".svg";
+      const path = makeUniqueArchivePath(`images/avatars/${safeFilename(sender)}${extension}`, usedPaths);
+      files.push(png ? { path, data: png } : { path, text: buildMonogramSvg(monogram.letter, monogram.color) });
       pathsBySender.set(sender, path);
     }
 
@@ -2290,9 +2359,42 @@
     return { warnings };
   }
 
+  const MONOGRAM_SIZE_PX = 128;
+  const MONOGRAM_DEFAULT_COLOR = "#5f6368";
+
+  // Draws a letter avatar as a round PNG with transparent corners. Returns
+  // the PNG bytes, or null if the canvas isn't usable (then use the SVG).
+  async function buildMonogramPng(letter, color) {
+    try {
+      const size = MONOGRAM_SIZE_PX;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+
+      ctx.fillStyle = MONOGRAM_DEFAULT_COLOR;
+      ctx.fillStyle = color || MONOGRAM_DEFAULT_COLOR; // ignored if invalid
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `600 ${size * 0.5}px Roboto, Arial, Helvetica, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(letter, size / 2, size / 2 + size * 0.03);
+
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+    } catch {
+      return null;
+    }
+  }
+
   function buildMonogramSvg(letter, color) {
-    const size = 128;
-    const fill = escapeHtmlAttribute(color || "#5f6368");
+    const size = MONOGRAM_SIZE_PX;
+    const fill = escapeHtmlAttribute(color || MONOGRAM_DEFAULT_COLOR);
     const label = escapeHtmlAttribute(letter);
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
@@ -2499,7 +2601,9 @@
 
       const messageLines = buildMessageLines(message);
       if (message.sender === "Me") {
-        lines.push(`<div style="text-align:right">`, "", ...messageLines, "</div>", "");
+        // align, not style: Markdown viewers (MDZip's editor included) strip
+        // inline styles, but keep align.
+        lines.push(`<div align="right">`, "", ...messageLines, "</div>", "");
       } else {
         lines.push(...messageLines);
       }
