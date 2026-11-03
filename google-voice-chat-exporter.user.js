@@ -3,7 +3,7 @@
 // @namespace    https://github.com/mdzip-project/mdzip-google-voice-exporter
 // @homepageURL  https://mdzip.org/google-voice
 // @supportURL   https://github.com/mdzip-project/mdzip-google-voice-exporter/issues
-// @version      0.2.4
+// @version      0.2.5
 // @description  Save an open Google Voice conversation, with its text, timestamps and photos, as one MDZip (.mdz) file you can keep, print or share.
 // @icon         https://mdzip.org/assets/images/phone-icon-64.png
 // @match        https://voice.google.com/*
@@ -22,7 +22,7 @@
   "use strict";
 
   const APP_NAME = "Google Voice Chat Exporter";
-  const APP_VERSION = "0.2.4";
+  const APP_VERSION = "0.2.5";
   const APP_URL = "https://github.com/mdzip-project/mdzip-google-voice-exporter";
   // The exported file is a standard zip either way (manifest.json and all) —
   // this only controls the extension. Set to "zip" if you'd rather skip the
@@ -2113,12 +2113,50 @@
       .sort((a, b) => a.localeCompare(b));
   }
 
+  // Who the conversation is with, read from its header ("Alex Rivera", or
+  // "Ann, Bob, Cy, +1" over "Group message"). Used when the exported messages
+  // have no sender but "Me" — a range where only you wrote, or a group nobody
+  // has answered yet — so the export still names the other people.
+  function getHeaderContacts() {
+    const header = findConversationHeader();
+    const headerText = header ? cleanText(header.textContent || "") : "";
+    const title = getConversationTitle();
+    const saysGroup = /\bGroup message\b/i.test(headerText);
+    if (!title || title === "Google Voice conversation") {
+      return { names: [], more: 0, isGroup: saysGroup };
+    }
+
+    const parts = title.split(/\s*,\s*/).filter(Boolean);
+    const moreMatch = parts.length > 1 ? /^\+(\d+)$/.exec(parts[parts.length - 1]) : null;
+    const isGroup = saysGroup || Boolean(moreMatch);
+    if (!isGroup) {
+      // One person; a comma here is part of the name ("Smith, Jo").
+      return { names: [title], more: 0, isGroup: false };
+    }
+    return {
+      names: moreMatch ? parts.slice(0, -1) : parts,
+      more: moreMatch ? Number(moreMatch[1]) : 0,
+      isGroup: true
+    };
+  }
+
+  // The other people in the export: its senders, or the header's when no one
+  // but "Me" sent anything in the exported messages.
+  function getExportContacts(messages) {
+    const senders = getMessagesContacts(messages);
+    if (senders.length > 0) {
+      return { names: senders, more: 0, isGroup: senders.length > 1, fromHeader: false };
+    }
+    return { ...getHeaderContacts(), fromHeader: true };
+  }
+
   // Used for filenames only — a full contact list would make group-chat
   // filenames unwieldy, so groups collapse to "group" (matching the
   // "Google Voice group message" heading shown for the same case).
   function getFilenameContactLabel(messages) {
-    const contacts = getMessagesContacts(messages);
-    return contacts.length === 1 ? contacts[0] : "group";
+    const contacts = getExportContacts(messages);
+    if (contacts.isGroup) return "group";
+    return contacts.names[0] || "conversation";
   }
 
   // Used only for the dialog's filename preview, before any messages have
@@ -2560,14 +2598,15 @@
   }
 
   function buildMarkdown({ exportedAt, messages, warnings, partInfo }) {
-    const contacts = getMessagesContacts(messages);
+    const exportContacts = getExportContacts(messages);
+    const contacts = exportContacts.names;
 
-    const heading = contacts.length > 1
+    const heading = exportContacts.isGroup
       ? "Google Voice group message"
       : `Google Voice conversation with ${contacts[0] || "Unknown Contact"}`;
 
     const phoneNumbersByContact = getContactPhoneNumbers();
-    const fallbackPhoneNumber = contacts.length === 1 ? getHeaderPhoneNumber() : "";
+    const fallbackPhoneNumber = !exportContacts.isGroup && contacts.length === 1 ? getHeaderPhoneNumber() : "";
 
     const lines = [
       `# ${escapeMarkdown(heading)}`,
@@ -2584,6 +2623,7 @@
         const phone = phoneNumbersByContact.get(contact.toLowerCase()) || fallbackPhoneNumber;
         return `- ${escapeMarkdown(contact)}${phone ? ` — ${phone}` : ""}`;
       }),
+      ...(exportContacts.more > 0 ? [`- and ${exportContacts.more} more`] : []),
       "",
       "---",
       ""

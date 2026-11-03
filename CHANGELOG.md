@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.5
+
+- **Exports name the other people even when only you wrote.** If the
+  exported messages were all yours (a year or date range where the other
+  person didn't write, or a group nobody has answered yet), the export was
+  titled "Unknown Contact", had no contacts, and its file was named as a group
+  message. The names now come from the conversation's header: one person's
+  name and number, or a group message with its members.
+
 ## 0.2.4
 
 - **Updates come from wherever you installed the script.** The script no
