@@ -3,7 +3,7 @@
 // @namespace    https://github.com/mdzip-project/mdzip-google-voice-exporter
 // @homepageURL  https://mdzip.org/google-voice
 // @supportURL   https://github.com/mdzip-project/mdzip-google-voice-exporter/issues
-// @version      0.2.3
+// @version      0.2.4
 // @description  Save an open Google Voice conversation, with its text, timestamps and photos, as one MDZip (.mdz) file you can keep, print or share.
 // @icon         https://mdzip.org/assets/images/phone-icon-64.png
 // @match        https://voice.google.com/*
@@ -16,15 +16,13 @@
 // @connect      google.com
 // @connect      gstatic.com
 // @connect      ggpht.com
-// @downloadURL  https://raw.githubusercontent.com/mdzip-project/mdzip-google-voice-exporter/main/google-voice-chat-exporter.user.js
-// @updateURL    https://raw.githubusercontent.com/mdzip-project/mdzip-google-voice-exporter/main/google-voice-chat-exporter.user.js
 // ==/UserScript==
 
 (function () {
   "use strict";
 
   const APP_NAME = "Google Voice Chat Exporter";
-  const APP_VERSION = "0.2.3";
+  const APP_VERSION = "0.2.4";
   const APP_URL = "https://github.com/mdzip-project/mdzip-google-voice-exporter";
   // The exported file is a standard zip either way (manifest.json and all) —
   // this only controls the extension. Set to "zip" if you'd rather skip the

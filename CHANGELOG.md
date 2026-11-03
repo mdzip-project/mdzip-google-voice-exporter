@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4
+
+- **Updates come from wherever you installed the script.** The script no
+  longer names GitHub as its update source, so a copy installed from Greasy
+  Fork updates from Greasy Fork, and one installed from GitHub or mdzip.org
+  keeps updating from GitHub.
+
 ## 0.2.3
 
 - **Exporting one year or a date range now works as chosen.** The year and
