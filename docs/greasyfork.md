@@ -18,26 +18,15 @@ and saves just that conversation.
 
 ### What it does
 
-<!-- Greasy Fork strips align and float, so a borderless two-column table puts
-     the dialog beside the list. Markdown isn't processed inside it. -->
-<table style="border: none">
-<tr>
-<td style="border: none">
-<ul>
-<li>Exports the whole conversation, chosen years, or a date range. Long
-conversations are split into one file per year unless you turn that off.</li>
-<li>Keeps the photos, contact pictures, and who said what. Your own messages
-sit on the right, like in Google Voice.</li>
-<li>Runs in your browser. Your messages aren't sent anywhere: the script reads
-the conversation from the page, downloads its photos from Google, and
-saves the file on your computer.</li>
-</ul>
-</td>
-<td style="border: none">
-<img src="https://raw.githubusercontent.com/mdzip-project/mdzip-google-voice-exporter/main/docs/images/listing/3-export-dialog.png" alt="Choosing what to export" width="360">
-</td>
-</tr>
-</table>
+- Exports the whole conversation, chosen years, or a date range. Long
+  conversations are split into one file per year unless you turn that off.
+- Keeps the photos, contact pictures, and who said what. Your own messages
+  sit on the right, like in Google Voice.
+- Runs in your browser. Your messages aren't sent anywhere: the script reads
+  the conversation from the page, downloads its photos from Google, and
+  saves the file on your computer.
+
+<img src="https://raw.githubusercontent.com/mdzip-project/mdzip-google-voice-exporter/main/docs/images/listing/3-export-dialog.png" alt="Choosing what to export" width="420">
 
 ### What you get
 
